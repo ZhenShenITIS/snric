@@ -3,6 +3,7 @@
 # Базовая директория для всех узлов
 base_dir=/root/sonaric_nodes
 
+
 # Функция для проверки и установки Docker, если он не установлен
 check_docker() {
     if ! command -v docker &> /dev/null; then
@@ -37,6 +38,12 @@ EOF
         docker build -t sonaric-node -f Dockerfile.sonaric .
         rm Dockerfile.sonaric
     fi
+}
+build_base_image
+
+rebuild_base_image(){
+  docker rmi sonaric_node
+  build_base_image
 }
 
 # Функция для установки нового узла
@@ -211,7 +218,6 @@ create_containers_from_file() {
 
 # Главное меню
 
-build_base_image
 show_header() {
   echo ""
   echo ""
@@ -231,7 +237,7 @@ show_header() {
 show_menu(){
   echo "Внимание! Все ноды устанавливаются с ограничением на потребление оперативной памяти в 286 Мб!"
   echo "Выберите действие:"
-  echo "1. Создать Docker-образ"
+  echo "1. Пересоздать Docker-образ"
   echo "2. Установить новую ноду"
   echo "3. Обновить все ноды"
   echo "4. Задать автоматическое ежедневное обновление всех нод"
@@ -247,7 +253,7 @@ main_menu() {
         read action
         case $action in
                 1)
-                    build_base_image
+                    rebuild_base_image
                     ;;
                 2)
                     install_new_node
