@@ -2,6 +2,7 @@
 #Test change
 #test
 #testtest81298712
+#test another
 # Базовая директория для всех узлов
 base_dir=/root/sonaric_nodes
 
