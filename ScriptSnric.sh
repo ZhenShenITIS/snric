@@ -42,7 +42,7 @@ EOF
 build_base_image
 
 rebuild_base_image(){
-  docker rmi sonaric_node
+  docker rmi sonaric-node
   build_base_image
 }
 
