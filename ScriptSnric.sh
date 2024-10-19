@@ -1,8 +1,5 @@
 #!/bin/bash
-#Test change
-#test
-#testtest81298712
-#test another
+
 # Базовая директория для всех узлов
 base_dir=/root/sonaric_nodes
 
@@ -16,6 +13,7 @@ check_docker() {
 
 # Функция для создания базового Docker-образа с поддержкой systemd
 build_base_image() {
+    check_docker
     if ! docker images | grep -q sonaric-node; then
         echo "Создание базового Docker-образа для Sonaric..."
         cat > Dockerfile.sonaric <<EOF
@@ -46,13 +44,14 @@ install_new_node() {
     echo "Установка нового узла Sonaric..."
 
     # Запрос данных у пользователя
-    read -p "Введите данные прокси (IP:Port:Login:Pass): " proxy_details
+    read -p "Введите данные прокси и ключ из дискорда (IP:Port:Login:Pass:Key): " proxy_details
 
     # Парсинг данных прокси
     proxy_ip=$(echo $proxy_details | cut -d':' -f1)
     proxy_port=$(echo $proxy_details | cut -d':' -f2)
     proxy_username=$(echo $proxy_details | cut -d':' -f3)
     proxy_password=$(echo $proxy_details | cut -d':' -f4)
+    key=$(echo $proxy_details | cut -d':' -f5)
 
     # Создание корневой директории, если не существует
     mkdir -p "$base_dir"
@@ -77,6 +76,7 @@ install_new_node() {
         -e container=docker \
         -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
         -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        --memory="286m" \
         --name "$node_name" \
         --hostname "$node_name" \
         sonaric-node
@@ -91,49 +91,26 @@ install_new_node() {
     # Установка Sonaric внутри контейнера
     echo "Установка Sonaric в контейнере $node_name..."
     docker exec "$node_name" bash -c "
-        set -e
-        export DEBIAN_FRONTEND=noninteractive
-        export HTTP_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
-        export HTTPS_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+      set -e
+      export DEBIAN_FRONTEND=noninteractive
+      export HTTP_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+      export HTTPS_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
 
-        # Обновление списка пакетов
-        apt-get update
+      # Обновление списка пакетов
+      apt-get update
 
-        # Установка необходимых пакетов
-        apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
+      # Установка необходимых пакетов
+      apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
+      " | tee -a "$node_dir/$node_name.log"
+    docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)" | tee -a "$node_dir/$node_name.log"
+    docker exec -it "$node_name" sonaric node-register $node_key | tee -a "$node_dir/$node_name.txt"
 
-        # Добавление ключа репозитория
-        install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL \"https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg\" | gpg --dearmor -o /etc/apt/keyrings/sonaric.gpg
-        chmod a+r /etc/apt/keyrings/sonaric.gpg
-
-        # Добавление репозитория Sonaric
-        echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/sonaric.gpg] https://us-central1-apt.pkg.dev/projects/sonaric-platform sonaric-releases-apt main\" > /etc/apt/sources.list.d/sonaric.list
-
-        # Обновление списка пакетов
-        apt-get update
-
-        # Установка Sonaric
-        apt-get install -y sonaric
-
-        # Запуск службы sonaricd
-        systemctl enable sonaricd
-        systemctl start sonaricd
-
-        # Ожидание запуска Sonaric
-        for i in {1..20}; do
-            sonaric version && break || sleep 2
-        done
-    " | tee -a "$node_dir/$node_name.log"
-
-    # Получение информации об узле
-    node_info=$(docker exec "$node_name" sonaric node-info 2>/dev/null)
-    if [ -z "$node_info" ]; then
-        echo "Ошибка при получении информации узла $node_name"
+    # Проверка успешной регистрации
+    file_content=$(cat "$node_dir/$node_name.txt")
+    if [ "$file_content" == "✔ Success" ]; then
+      echo "Нода $node_name успешно зарегистрирована"
     else
-        node_id=$(echo "$node_info" | grep 'Node ID' | awk '{print $3}')
-        node_version=$(echo "$node_info" | grep 'Version' | awk '{print $2}')
-        echo "Узел $node_name установлен с ID $node_id и версией $node_version" | tee -a "$node_dir/$node_name.log"
+      echo "Ошибка регистрации ноды $node_name"
     fi
 }
 
@@ -142,14 +119,27 @@ update_all_nodes() {
     echo "Обновление всех узлов Sonaric..."
     for container in $(docker ps -a --filter "name=node" --format "{{.Names}}"); do
         echo "Обновление $container..."
-        docker exec "$container" bash -c "
-            export DEBIAN_FRONTEND=noninteractive
-            apt-get update
-            apt-get install -y sonaricd sonaric
-            systemctl restart sonaricd
-        " | tee -a "$base_dir/$container/$container.log"
+        docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)"
     done
     echo "Все узлы успешно обновлены."
+}
+
+# Функция для установки задачи cron для обновления узлов раз в сутки
+setup_daily_update() {
+    echo "Настройка ежедневного обновления всех узлов..."
+
+    # Проверяем, есть ли cron на системе, и устанавливаем его, если его нет
+    if ! command -v crontab &> /dev/null; then
+        echo "cron не установлен. Устанавливаю cron..."
+        apt-get update && apt-get install -y cron
+        systemctl enable cron
+        systemctl start cron
+    fi
+    chmod 777 /root/snric/update.sh
+    # Создаем временный файл для новой cron задачи
+    (crontab -l 2>/dev/null; echo "0 2 * * * /root/snric/update.sh") | crontab -
+
+    echo "Задача cron установлена: обновление всех узлов каждый день в 02:00."
 }
 
 # Функция для перезапуска всех узлов
@@ -160,21 +150,6 @@ restart_all_nodes() {
         docker exec "$container" systemctl restart sonaricd
     done
     echo "Все узлы успешно перезапущены."
-}
-
-# Функция для получения информации со всех узлов
-get_node_info() {
-    echo "Сбор информации со всех узлов..."
-    for container in $(docker ps --filter "name=node" --format "{{.Names}}"); do
-        node_info=$(docker exec "$container" sonaric node-info 2>/dev/null)
-        if [ -z "$node_info" ]; then
-            echo "Не удалось получить информацию узла $container"
-        else
-            node_id=$(echo "$node_info" | grep 'Node ID' | awk '{print $3}')
-            node_version=$(echo "$node_info" | grep 'Version' | awk '{print $2}')
-            echo "$node_id $node_version"
-        fi
-    done
 }
 
 # Функция для создания контейнеров с прокси и ключами из файла
@@ -205,8 +180,9 @@ create_containers_from_file() {
             -e container=docker \
             -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
             -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+            --memory="286m" \
             --name "$node_name" \
-            --hostname "$node_name" \
+            --hostname vps \
             sonaric-node
 
         if [ $? -eq 0 ]; then
@@ -224,37 +200,16 @@ create_containers_from_file() {
 
                 # Установка необходимых пакетов
                 apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
-
-                # Добавление ключа репозитория
-                install -m 0755 -d /etc/apt/keyrings
-                curl -fsSL \"https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg\" | gpg --dearmor -o /etc/apt/keyrings/sonaric.gpg
-                chmod a+r /etc/apt/keyrings/sonaric.gpg
-
-                # Добавление репозитория Sonaric
-                echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/sonaric.gpg] https://us-central1-apt.pkg.dev/projects/sonaric-platform sonaric-releases-apt main\" > /etc/apt/sources.list.d/sonaric.list
-
-                # Обновление списка пакетов
-                apt-get update
-
-                # Установка Sonaric
-                apt-get install -y sonaric
-
-                # Регистрация узла Sonaric с использованием ключа
-                sonaric node-register $node_key
-
-                # Запуск службы sonaricd
-                systemctl enable sonaricd
-                systemctl start sonaricd
             " | tee -a "$node_dir/$node_name.log"
+            docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)" | tee -a "$node_dir/$node_name.log"
+            docker exec -it "$node_name" sonaric node-register $node_key | tee -a "$node_dir/$node_name.txt"
 
             # Проверка успешной регистрации
-            node_info=$(docker exec "$node_name" sonaric node-info 2>/dev/null)
-            if [ -z "$node_info" ]; then
-                echo "Ошибка при получении информации узла $node_name"
+            file_content=$(cat "$node_dir/$node_name.txt")
+            if [ "$file_content" == "✔ Success" ]; then
+                echo "Нода $node_name успешно зарегистрирована"
             else
-                node_id=$(echo "$node_info" | grep 'Node ID' | awk '{print $3}')
-                node_version=$(echo "$node_info" | grep 'Version' | awk '{print $2}')
-                echo "Узел $node_name успешно зарегистрирован с ID $node_id и версией $node_version" | tee -a "$node_dir/$node_name.log"
+                echo "Ошибка регистрации ноды $node_name"
             fi
         else
             echo "Ошибка при запуске контейнера $node_name"
@@ -263,35 +218,69 @@ create_containers_from_file() {
 }
 
 # Главное меню
-check_docker
+
 build_base_image
+show_header() {
+  echo "███████╗██████╗░███████╗███╗░░░███╗  ░██████╗░█████╗░███╗░░██╗░█████╗░██████╗░██╗░█████╗░"
+  echo "██╔════╝██╔══██╗██╔════╝████╗░████║  ██╔════╝██╔══██╗████╗░██║██╔══██╗██╔══██╗██║██╔══██╗"
+  echo "█████╗░░██████╦╝█████╗░░██╔████╔██║  ╚█████╗░██║░░██║██╔██╗██║███████║██████╔╝██║██║░░╚═╝"
+  echo "██╔══╝░░██╔══██╗██╔══╝░░██║╚██╔╝██║  ░╚═══██╗██║░░██║██║╚████║██╔══██║██╔══██╗██║██║░░██╗"
+  echo "███████╗██████╦╝███████╗██║░╚═╝░██║  ██████╔╝╚█████╔╝██║░╚███║██║░░██║██║░░██║██║╚█████╔╝"
+  echo "╚══════╝╚═════╝░╚══════╝╚═╝░░░░░╚═╝  ╚═════╝░░╚════╝░╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░╚════╝░"
+  echo "==============================================================================================="
+  echo "                           b.y. @ZhenShen9 and Begunki Uzlov                                   "
+  echo "                                        v.1.0                                                  "
+  echo "==============================================================================================="
+}
 
-echo "Выберите действие:"
-echo "1. Установить новый узел"
-echo "2. Обновить все узлы"
-echo "3. Перезапустить все узлы"
-echo "4. Получить информацию со всех узлов"
-echo "0. Выход"
-read -p "Введите номер действия: " action
+show_menu(){
+  echo "Внимание! Все ноды устанавливаются с ограничением на потребление оперативной памяти в 286 Мб!"
+  echo "Выберите действие:"
+  echo "1. Создать Docker-образ"
+  echo "2. Установить одну ноду"
+  echo "3. Мульти-устанвка нод с файла"
+  echo "4. Обновить все ноды"
+  echo "5. Задать автоматическое ежедневное обновление всех нод"
+  echo "6. Перезапустить все ноды"
+  echo "0. Выход"
+  echo -n "Введите номер действия: "
+}
+# Основной цикл меню
+main_menu() {
+    while true; do
+        show_header
+        show_menu
+        read action
+        case $action in
+                1)
+                    build_base_image
+                    ;;
+                2)
+                    install_new_node
+                    ;;
+                3)
+                    create_containers_from_file
+                    ;;
+                4)
+                    update_all_nodes
+                    ;;
+                5)
+                    setup_daily_update
+                    ;;
+                6)
+                    restart_all_nodes
+                    ;;
+                *)
+                    echo "Неверный выбор. Скрипт завершён."
+                    exit 1
+                    ;;
+                0)
+                    exit 0
+                    ;;
+        esac
+    done
+}
 
-case $action in
-    1)
-        install_new_node
-        ;;
-    2)
-        update_all_nodes
-        ;;
-    3)
-        restart_all_nodes
-        ;;
-    4)
-        get_node_info
-        ;;
-    *)
-        echo "Неверный выбор. Скрипт завершён."
-        exit 1
-        ;;
-    0)
-        exit 0
-        ;;
-esac
+# Запуск основного меню
+main_menu
+
