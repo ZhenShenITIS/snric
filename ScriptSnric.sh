@@ -78,7 +78,7 @@ install_new_node() {
         -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
         --memory="286m" \
         --name "$node_name" \
-        --hostname "$node_name" \
+        --hostname VPS \
         sonaric-node
 
     if [ $? -eq 0 ]; then
@@ -103,15 +103,7 @@ install_new_node() {
       apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
       " | tee -a "$node_dir/$node_name.log"
     docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)" | tee -a "$node_dir/$node_name.log"
-    docker exec -it "$node_name" sonaric node-register $node_key | tee -a "$node_dir/$node_name.txt"
-
-    # Проверка успешной регистрации
-    file_content=$(cat "$node_dir/$node_name.txt")
-    if [ "$file_content" == "✔ Success" ]; then
-      echo "Нода $node_name успешно зарегистрирована"
-    else
-      echo "Ошибка регистрации ноды $node_name"
-    fi
+    docker exec -it "$node_name" sonaric node-register $key | tee -a "$node_dir/$node_name.txt"
 }
 
 # Функция для обновления всех узлов
@@ -221,6 +213,8 @@ create_containers_from_file() {
 
 build_base_image
 show_header() {
+  echo ""
+  echo ""
   echo "███████╗██████╗░███████╗███╗░░░███╗  ░██████╗░█████╗░███╗░░██╗░█████╗░██████╗░██╗░█████╗░"
   echo "██╔════╝██╔══██╗██╔════╝████╗░████║  ██╔════╝██╔══██╗████╗░██║██╔══██╗██╔══██╗██║██╔══██╗"
   echo "█████╗░░██████╦╝█████╗░░██╔████╔██║  ╚█████╗░██║░░██║██╔██╗██║███████║██████╔╝██║██║░░╚═╝"
@@ -231,17 +225,17 @@ show_header() {
   echo "                           b.y. @ZhenShen9 and Begunki Uzlov                                   "
   echo "                                        v.1.0                                                  "
   echo "==============================================================================================="
+  echo ""
 }
 
 show_menu(){
   echo "Внимание! Все ноды устанавливаются с ограничением на потребление оперативной памяти в 286 Мб!"
   echo "Выберите действие:"
   echo "1. Создать Docker-образ"
-  echo "2. Установить одну ноду"
-  echo "3. Мульти-устанвка нод с файла"
-  echo "4. Обновить все ноды"
-  echo "5. Задать автоматическое ежедневное обновление всех нод"
-  echo "6. Перезапустить все ноды"
+  echo "2. Установить новую ноду"
+  echo "3. Обновить все ноды"
+  echo "4. Задать автоматическое ежедневное обновление всех нод"
+  echo "5. Перезапустить все ноды"
   echo "0. Выход"
   echo -n "Введите номер действия: "
 }
@@ -259,19 +253,16 @@ main_menu() {
                     install_new_node
                     ;;
                 3)
-                    create_containers_from_file
-                    ;;
-                4)
                     update_all_nodes
                     ;;
-                5)
+                4)
                     setup_daily_update
                     ;;
-                6)
+                5)
                     restart_all_nodes
                     ;;
                 *)
-                    echo "Неверный выбор. Скрипт завершён."
+                    echo "Скрипт завершён."
                     exit 1
                     ;;
                 0)
