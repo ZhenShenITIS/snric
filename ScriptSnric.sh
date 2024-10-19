@@ -177,6 +177,91 @@ get_node_info() {
     done
 }
 
+# Функция для создания контейнеров с прокси и ключами из файла
+create_containers_from_file() {
+    input_file=/root/snric/data.txt
+
+    if [ ! -f "$input_file" ]; then
+        echo "Файл $input_file не найден!"
+        exit 1
+    fi
+
+    while IFS=: read -r proxy_ip proxy_port proxy_username proxy_password node_key; do
+        echo "Создаю контейнер для прокси $proxy_ip:$proxy_port..."
+
+        # Создание директории для нового узла
+        node_num=$(ls -l $base_dir | grep -c ^d)
+        node_name="node$((node_num + 1))"
+        node_dir="$base_dir/$node_name"
+        mkdir -p "$node_dir"
+
+        # Запуск контейнера
+        docker run -d --privileged \
+            --cgroupns=host \
+            --security-opt seccomp=unconfined \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            -v /dev/urandom:/dev/urandom \
+            -v /dev/random:/dev/random \
+            -e container=docker \
+            -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+            -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+            --name "$node_name" \
+            --hostname "$node_name" \
+            sonaric-node
+
+        if [ $? -eq 0 ]; then
+            echo "Контейнер $node_name успешно запущен"
+
+            # Установка Sonaric внутри контейнера
+            docker exec "$node_name" bash -c "
+                set -e
+                export DEBIAN_FRONTEND=noninteractive
+                export HTTP_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+                export HTTPS_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+
+                # Обновление списка пакетов
+                apt-get update
+
+                # Установка необходимых пакетов
+                apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
+
+                # Добавление ключа репозитория
+                install -m 0755 -d /etc/apt/keyrings
+                curl -fsSL \"https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg\" | gpg --dearmor -o /etc/apt/keyrings/sonaric.gpg
+                chmod a+r /etc/apt/keyrings/sonaric.gpg
+
+                # Добавление репозитория Sonaric
+                echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/sonaric.gpg] https://us-central1-apt.pkg.dev/projects/sonaric-platform sonaric-releases-apt main\" > /etc/apt/sources.list.d/sonaric.list
+
+                # Обновление списка пакетов
+                apt-get update
+
+                # Установка Sonaric
+                apt-get install -y sonaric
+
+                # Регистрация узла Sonaric с использованием ключа
+                sonaric node-register $node_key
+
+                # Запуск службы sonaricd
+                systemctl enable sonaricd
+                systemctl start sonaricd
+            " | tee -a "$node_dir/$node_name.log"
+
+            # Проверка успешной регистрации
+            node_info=$(docker exec "$node_name" sonaric node-info 2>/dev/null)
+            if [ -z "$node_info" ]; then
+                echo "Ошибка при получении информации узла $node_name"
+            else
+                node_id=$(echo "$node_info" | grep 'Node ID' | awk '{print $3}')
+                node_version=$(echo "$node_info" | grep 'Version' | awk '{print $2}')
+                echo "Узел $node_name успешно зарегистрирован с ID $node_id и версией $node_version" | tee -a "$node_dir/$node_name.log"
+            fi
+        else
+            echo "Ошибка при запуске контейнера $node_name"
+        fi
+    done < "$input_file"
+}
+
 # Главное меню
 check_docker
 build_base_image
@@ -186,7 +271,8 @@ echo "1. Установить новый узел"
 echo "2. Обновить все узлы"
 echo "3. Перезапустить все узлы"
 echo "4. Получить информацию со всех узлов"
-read -p "Введите номер действия (1, 2, 3 или 4): " action
+echo "0. Выход"
+read -p "Введите номер действия: " action
 
 case $action in
     1)
@@ -204,5 +290,8 @@ case $action in
     *)
         echo "Неверный выбор. Скрипт завершён."
         exit 1
+        ;;
+    0)
+        exit 0
         ;;
 esac
