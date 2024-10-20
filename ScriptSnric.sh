@@ -39,6 +39,7 @@ EOF
         rm Dockerfile.sonaric
     fi
 }
+check_docker
 build_base_image
 
 rebuild_base_image(){
