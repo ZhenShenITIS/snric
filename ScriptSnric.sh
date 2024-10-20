@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#test
 # Базовая директория для всех узлов
 base_dir=/root/sonaric_nodes
 
