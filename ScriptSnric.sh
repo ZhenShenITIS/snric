@@ -42,7 +42,19 @@ EOF
 build_base_image
 
 rebuild_base_image(){
-  docker rmi sonaric-node
+  local image_name="sonaric-node"
+
+  # Проверяем, существует ли образ
+  image_id=$(docker images -q "$image_name")
+
+  if [ -n "$image_id" ]; then
+      echo "Образ $image_name существует. Удаляем его..."
+      docker rmi -f "$image_id"
+  else
+      echo "Образ $image_name не найден. Создаем новый образ..."
+  fi
+
+  # Вызываем функцию для сборки образа
   build_base_image
 }
 
