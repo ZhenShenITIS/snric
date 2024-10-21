@@ -59,8 +59,7 @@ rebuild_base_image(){
   build_base_image
 }
 
-# Функция для установки нового узла
-install_new_node() {
+install_new_node286() {
     echo "Установка нового узла Sonaric..."
 
     # Запрос данных у пользователя
@@ -97,6 +96,139 @@ install_new_node() {
         -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
         -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
         --memory="286m" \
+        --cpus="1.0" \
+        --name "$node_name" \
+        --hostname VPS \
+        sonaric-node
+
+    if [ $? -eq 0 ]; then
+        echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
+    else
+        echo "Ошибка при запуске контейнера $node_name"
+        return 1
+    fi
+
+    # Установка Sonaric внутри контейнера
+    echo "Установка Sonaric в контейнере $node_name..."
+    docker exec "$node_name" bash -c "
+      set -e
+      export DEBIAN_FRONTEND=noninteractive
+      export HTTP_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+      export HTTPS_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+
+      # Обновление списка пакетов
+      apt-get update
+
+      # Установка необходимых пакетов
+      apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
+      " | tee -a "$node_dir/$node_name.log"
+    docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)" | tee -a "$node_dir/$node_name.log"
+    docker exec -it "$node_name" sonaric node-register $key | tee -a "$node_dir/$node_name.txt"
+}
+
+install_new_node512() {
+    echo "Установка нового узла Sonaric..."
+
+    # Запрос данных у пользователя
+    read -p "Введите данные прокси и ключ из дискорда (IP:Port:Login:Pass:Key): " proxy_details
+
+    # Парсинг данных прокси
+    proxy_ip=$(echo $proxy_details | cut -d':' -f1)
+    proxy_port=$(echo $proxy_details | cut -d':' -f2)
+    proxy_username=$(echo $proxy_details | cut -d':' -f3)
+    proxy_password=$(echo $proxy_details | cut -d':' -f4)
+    key=$(echo $proxy_details | cut -d':' -f5)
+
+    # Создание корневой директории, если не существует
+    mkdir -p "$base_dir"
+
+    # Определение следующего узла
+    node_num=$(ls -l $base_dir | grep -c ^d)
+    node_name="node$((node_num + 1))"
+    node_dir="$base_dir/$node_name"
+    mkdir "$node_dir"
+
+    # Сохранение данных прокси
+    echo "HTTP_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" > "$node_dir/proxy.conf"
+    echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
+
+    # Запуск контейнера
+    docker run -d --privileged \
+        --cgroupns=host \
+        --security-opt seccomp=unconfined \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v /dev/urandom:/dev/urandom \
+        -v /dev/random:/dev/random \
+        -e container=docker \
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        --memory="512m" \
+        --cpus="2.0" \
+        --name "$node_name" \
+        --hostname VPS \
+        sonaric-node
+
+    if [ $? -eq 0 ]; then
+        echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
+    else
+        echo "Ошибка при запуске контейнера $node_name"
+        return 1
+    fi
+
+    # Установка Sonaric внутри контейнера
+    echo "Установка Sonaric в контейнере $node_name..."
+    docker exec "$node_name" bash -c "
+      set -e
+      export DEBIAN_FRONTEND=noninteractive
+      export HTTP_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+      export HTTPS_PROXY=\"http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port\"
+
+      # Обновление списка пакетов
+      apt-get update
+
+      # Установка необходимых пакетов
+      apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
+      " | tee -a "$node_dir/$node_name.log"
+    docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)" | tee -a "$node_dir/$node_name.log"
+    docker exec -it "$node_name" sonaric node-register $key | tee -a "$node_dir/$node_name.txt"
+}
+
+install_new_nodenolimits() {
+    echo "Установка нового узла Sonaric..."
+
+    # Запрос данных у пользователя
+    read -p "Введите данные прокси и ключ из дискорда (IP:Port:Login:Pass:Key): " proxy_details
+
+    # Парсинг данных прокси
+    proxy_ip=$(echo $proxy_details | cut -d':' -f1)
+    proxy_port=$(echo $proxy_details | cut -d':' -f2)
+    proxy_username=$(echo $proxy_details | cut -d':' -f3)
+    proxy_password=$(echo $proxy_details | cut -d':' -f4)
+    key=$(echo $proxy_details | cut -d':' -f5)
+
+    # Создание корневой директории, если не существует
+    mkdir -p "$base_dir"
+
+    # Определение следующего узла
+    node_num=$(ls -l $base_dir | grep -c ^d)
+    node_name="node$((node_num + 1))"
+    node_dir="$base_dir/$node_name"
+    mkdir "$node_dir"
+
+    # Сохранение данных прокси
+    echo "HTTP_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" > "$node_dir/proxy.conf"
+    echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
+
+    # Запуск контейнера
+    docker run -d --privileged \
+        --cgroupns=host \
+        --security-opt seccomp=unconfined \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v /dev/urandom:/dev/urandom \
+        -v /dev/random:/dev/random \
+        -e container=docker \
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
         --name "$node_name" \
         --hostname VPS \
         sonaric-node
@@ -242,7 +374,7 @@ show_header() {
   echo "╚══════╝╚═════╝░╚══════╝╚═╝░░░░░╚═╝  ╚═════╝░░╚════╝░╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░╚════╝░"
   echo "========================================================================================="
   echo "                           b.y. @ZhenShen9 and Begunki Uzlov                             "
-  echo "                                        v.1.2                                            "
+  echo "                                        v.2.0                                            "
   echo "========================================================================================="
   echo ""
 }
@@ -251,10 +383,12 @@ show_menu(){
   echo "Внимание! Все ноды устанавливаются с ограничением на потребление оперативной памяти в 286 Мб!"
   echo "Выберите действие:"
   echo "1. Пересоздать Docker-образ"
-  echo "2. Установить новую ноду"
-  echo "3. Обновить все ноды"
-  echo "4. Задать автоматическое ежедневное обновление всех нод"
-  echo "5. Перезапустить все ноды"
+  echo "2. Установить новую ноду с ограничениями 1CPU, 286Mb"
+  echo "3. Установить новую ноду с ограничениями 2CPU, 512Mb"
+  echo "4. Установить новую ноду без ограничений"
+  echo "5. Обновить все ноды"
+  echo "6. Задать автоматическое ежедневное обновление всех нод"
+  echo "7. Перезапустить все ноды"
   echo "0. Выход"
   echo -n "Введите номер действия: "
 }
@@ -269,15 +403,22 @@ main_menu() {
                     rebuild_base_image
                     ;;
                 2)
-                    install_new_node
+                    install_new_node286
                     ;;
                 3)
-                    update_all_nodes
+                    install_new_node512
                     ;;
                 4)
+                    install_new_nodenolimits
+                    ;;
+
+                5)
+                    update_all_nodes
+                    ;;
+                6)
                     setup_daily_update
                     ;;
-                5)
+                7)
                     restart_all_nodes
                     ;;
                 *)
