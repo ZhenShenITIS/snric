@@ -315,8 +315,8 @@ install_nodes_from_file_286() {
               apt-get install -y apt-transport-https ca-certificates curl gnupg gnupg2 dirmngr
             " | tee -a "$node_dir/$node_name.log"
 
-            docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)" | tee -a "$node_dir/$node_name.log"
-            docker exec -it "$node_name" sonaric node-register $key | tee -a "$node_dir/$node_name.txt"
+            docker exec -i "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)" | tee -a "$node_dir/$node_name.log"
+            docker exec -i "$node_name" sonaric node-register $key | tee -a "$node_dir/$node_name.txt"
         else
             echo "Ошибка при запуске контейнера $node_name"
         fi
