@@ -18,7 +18,7 @@ build_base_image() {
     if ! docker images | grep -q sonaric-node; then
         echo "Создание базового Docker-образа для Sonaric..."
         cat > Dockerfile.sonaric <<EOF
-FROM ubuntu:22.04
+FROM jrei/systemd-ubuntu:22.04
 
 ENV container=docker
 
