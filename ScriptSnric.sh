@@ -85,19 +85,19 @@ install_new_node286() {
     echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
 
     # Запуск контейнера
-    docker run -d --privileged \\
-        --cgroupns=host \\
-        --security-opt seccomp=unconfined \\
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \\
-        -v /dev/urandom:/dev/urandom \\
-        -v /dev/random:/dev/random \\
-        -e container=docker \\
-        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
-        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
-        --memory="286m" \\
-        --cpus="0.5" \\
-        --name "$node_name" \\
-        --hostname VPS \\
+    docker run -d --privileged \
+        --cgroupns=host \
+        --security-opt seccomp=unconfined \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v /dev/urandom:/dev/urandom \
+        -v /dev/random:/dev/random \
+        -e container=docker \
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        --memory="286m" \
+        --cpus="0.5" \
+        --name "$node_name" \
+        --hostname VPS \
         jrei-sonaric-node
 
     if [ $? -eq 0 ]; then
@@ -152,19 +152,19 @@ install_new_node512() {
     echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
 
     # Запуск контейнера
-    docker run -d --privileged \\
-        --cgroupns=host \\
-        --security-opt seccomp=unconfined \\
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \\
-        -v /dev/urandom:/dev/urandom \\
-        -v /dev/random:/dev/random \\
-        -e container=docker \\
-        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
-        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
-        --memory="512m" \\
-        --cpus="1.0" \\
-        --name "$node_name" \\
-        --hostname VPS \\
+    docker run -d --privileged \
+        --cgroupns=host \
+        --security-opt seccomp=unconfined \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v /dev/urandom:/dev/urandom \
+        -v /dev/random:/dev/random \
+        -e container=docker \
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        --memory="512m" \
+        --cpus="1.0" \
+        --name "$node_name" \
+        --hostname VPS \
         jrei-sonaric-node
 
     if [ $? -eq 0 ]; then
@@ -219,17 +219,17 @@ install_new_nodenolimits() {
     echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
 
     # Запуск контейнера
-    docker run -d --privileged \\
-        --cgroupns=host \\
-        --security-opt seccomp=unconfined \\
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \\
-        -v /dev/urandom:/dev/urandom \\
-        -v /dev/random:/dev/random \\
-        -e container=docker \\
-        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
-        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
-        --name "$node_name" \\
-        --hostname VPS \\
+    docker run -d --privileged \
+        --cgroupns=host \
+        --security-opt seccomp=unconfined \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v /dev/urandom:/dev/urandom \
+        -v /dev/random:/dev/random \
+        -e container=docker \
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
+        --name "$node_name" \
+        --hostname VPS \
         jrei-sonaric-node
 
     if [ $? -eq 0 ]; then
