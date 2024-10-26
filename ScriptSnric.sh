@@ -258,6 +258,16 @@ install_new_nodenolimits() {
     docker exec -it "$node_name" sonaric node-register $key | tee -a "$node_dir/$node_name.txt"
 }
 
+install_from_file286() {
+    python3 multi286.py
+}
+install_from_file512() {
+    python3 multi512.py
+}
+install_from_filenolimits() {
+    python3 multino.py
+}
+
 # Функция для обновления всех узлов
 update_all_nodes() {
     echo "Обновление всех узлов Sonaric..."
@@ -308,7 +318,7 @@ show_header() {
   echo "╚══════╝╚═════╝░╚══════╝╚═╝░░░░░╚═╝  ╚═════╝░░╚════╝░╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░╚════╝░"
   echo "========================================================================================="
   echo "                           b.y. @ZhenShen9 and Begunki Uzlov                             "
-  echo "                                        v.2.0                                            "
+  echo "                                        v.3.0                                            "
   echo "========================================================================================="
   echo ""
 }
@@ -320,9 +330,12 @@ show_menu(){
   echo "2. Установить новую ноду с ограничениями 1CPU, 286Mb"
   echo "3. Установить новую ноду с ограничениями 2CPU, 512Mb"
   echo "4. Установить новую ноду без ограничений"
-  echo "5. Обновить все ноды"
-  echo "6. Задать автоматическое ежедневное обновление всех нод"
-  echo "7. Перезапустить все ноды"
+  echo "5. Мульти-установка нод с ограничениями 1CPU, 286Mb"
+  echo "6. Мульти-установка нод с ограничениями 2CPU, 512Mb"
+  echo "7. Мульти-установка нод без ограничений"
+  echo "8. Обновить все ноды"
+  echo "9. Задать автоматическое ежедневное обновление всех нод"
+  echo "10. Перезапустить все ноды"
   echo "0. Выход"
   echo -n "Введите номер действия: "
 }
@@ -346,12 +359,21 @@ main_menu() {
                     install_new_nodenolimits
                     ;;
                 5)
-                    update_all_nodes
+                    install_from_file286
                     ;;
                 6)
-                    setup_daily_update
+                    install_from_file512
                     ;;
                 7)
+                    install_from_filenolimits
+                    ;;
+                8)
+                    update_all_nodes
+                    ;;
+                9)
+                    setup_daily_update
+                    ;;
+                10)
                     restart_all_nodes
                     ;;
                 *)
