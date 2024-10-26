@@ -30,7 +30,7 @@ for proxy_data in lines:
         child.expect('запущен', timeout=30)
 
         child.expect('Success', timeout=300)
-        print ("Нода успешно запущена с данными ", proxy_data, " и ограничениями 2/0.512")
+        print ("Нода успешно запущена с данными ", proxy_data, " и ограничениями 1/0.512")
 
 
         # Ожидаем возвращения к меню для следующей установки

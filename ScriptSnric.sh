@@ -3,7 +3,6 @@
 # Базовая директория для всех узлов
 base_dir=/root/sonaric_nodes
 
-
 # Функция для проверки и установки Docker, если он не установлен
 check_docker() {
     if ! command -v docker &> /dev/null; then
@@ -15,14 +14,14 @@ check_docker() {
 # Функция для создания базового Docker-образа с поддержкой systemd
 build_base_image() {
     check_docker
-    if ! docker images | grep -q sonaric-node; then
+    if ! docker images | grep -q jrei-sonaric-node; then
         echo "Создание базового Docker-образа для Sonaric..."
         cat > Dockerfile.sonaric <<EOF
 FROM jrei/systemd-ubuntu:22.04
 
 ENV container=docker
 
-RUN apt-get update && \
+RUN apt-get update && \\
     apt-get install -y --no-install-recommends \\
         systemd systemd-sysv \\
         wget curl gnupg gnupg2 dirmngr \\
@@ -35,7 +34,7 @@ STOPSIGNAL SIGRTMIN+3
 
 CMD ["/sbin/init"]
 EOF
-        docker build -t sonaric-node -f Dockerfile.sonaric .
+        docker build -t jrei-sonaric-node -f Dockerfile.sonaric .
         rm Dockerfile.sonaric
     fi
 }
@@ -43,7 +42,7 @@ check_docker
 build_base_image
 
 rebuild_base_image(){
-  local image_name="sonaric-node"
+  local image_name="jrei-sonaric-node"
 
   # Проверяем, существует ли образ
   image_id=$(docker images -q "$image_name")
@@ -77,7 +76,7 @@ install_new_node286() {
 
     # Определение следующего узла
     node_num=$(ls -l $base_dir | grep -c ^d)
-    node_name="node$((node_num + 1))"
+    node_name="sonaric-node$((node_num + 1))"
     node_dir="$base_dir/$node_name"
     mkdir "$node_dir"
 
@@ -86,20 +85,20 @@ install_new_node286() {
     echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
 
     # Запуск контейнера
-    docker run -d --privileged \
-        --cgroupns=host \
-        --security-opt seccomp=unconfined \
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        -v /dev/urandom:/dev/urandom \
-        -v /dev/random:/dev/random \
-        -e container=docker \
-        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
-        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
-        --memory="286m" \
-        --cpus="1.0" \
-        --name "$node_name" \
-        --hostname VPS \
-        sonaric-node
+    docker run -d --privileged \\
+        --cgroupns=host \\
+        --security-opt seccomp=unconfined \\
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \\
+        -v /dev/urandom:/dev/urandom \\
+        -v /dev/random:/dev/random \\
+        -e container=docker \\
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
+        --memory="286m" \\
+        --cpus="0.5" \\
+        --name "$node_name" \\
+        --hostname VPS \\
+        jrei-sonaric-node
 
     if [ $? -eq 0 ]; then
         echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
@@ -144,7 +143,7 @@ install_new_node512() {
 
     # Определение следующего узла
     node_num=$(ls -l $base_dir | grep -c ^d)
-    node_name="node$((node_num + 1))"
+    node_name="sonaric-node$((node_num + 1))"
     node_dir="$base_dir/$node_name"
     mkdir "$node_dir"
 
@@ -153,20 +152,20 @@ install_new_node512() {
     echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
 
     # Запуск контейнера
-    docker run -d --privileged \
-        --cgroupns=host \
-        --security-opt seccomp=unconfined \
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        -v /dev/urandom:/dev/urandom \
-        -v /dev/random:/dev/random \
-        -e container=docker \
-        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
-        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
-        --memory="512m" \
-        --cpus="2.0" \
-        --name "$node_name" \
-        --hostname VPS \
-        sonaric-node
+    docker run -d --privileged \\
+        --cgroupns=host \\
+        --security-opt seccomp=unconfined \\
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \\
+        -v /dev/urandom:/dev/urandom \\
+        -v /dev/random:/dev/random \\
+        -e container=docker \\
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
+        --memory="512m" \\
+        --cpus="1.0" \\
+        --name "$node_name" \\
+        --hostname VPS \\
+        jrei-sonaric-node
 
     if [ $? -eq 0 ]; then
         echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
@@ -211,7 +210,7 @@ install_new_nodenolimits() {
 
     # Определение следующего узла
     node_num=$(ls -l $base_dir | grep -c ^d)
-    node_name="node$((node_num + 1))"
+    node_name="sonaric-node$((node_num + 1))"
     node_dir="$base_dir/$node_name"
     mkdir "$node_dir"
 
@@ -220,18 +219,18 @@ install_new_nodenolimits() {
     echo "HTTPS_PROXY=http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" >> "$node_dir/proxy.conf"
 
     # Запуск контейнера
-    docker run -d --privileged \
-        --cgroupns=host \
-        --security-opt seccomp=unconfined \
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        -v /dev/urandom:/dev/urandom \
-        -v /dev/random:/dev/random \
-        -e container=docker \
-        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
-        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
-        --name "$node_name" \
-        --hostname VPS \
-        sonaric-node
+    docker run -d --privileged \\
+        --cgroupns=host \\
+        --security-opt seccomp=unconfined \\
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \\
+        -v /dev/urandom:/dev/urandom \\
+        -v /dev/random:/dev/random \\
+        -e container=docker \\
+        -e HTTP_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
+        -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \\
+        --name "$node_name" \\
+        --hostname VPS \\
+        jrei-sonaric-node
 
     if [ $? -eq 0 ]; then
         echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
@@ -271,9 +270,9 @@ install_from_filenolimits() {
 # Функция для обновления всех узлов
 update_all_nodes() {
     echo "Обновление всех узлов Sonaric..."
-    for container in $(docker ps -a --filter "name=node" --format "{{.Names}}"); do
+    for container in $(docker ps -a --filter "name=sonaric-node" --format "{{.Names}}"); do
         echo "Обновление $container..."
-        docker exec -it "$node_name" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)"
+        docker exec -it "$container" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ZhenShenITIS/snricinstall/refs/heads/main/install.sh)"
     done
     echo "Все узлы успешно обновлены."
 }
@@ -299,13 +298,12 @@ setup_daily_update() {
 # Функция для перезапуска всех узлов
 restart_all_nodes() {
     echo "Перезапуск всех узлов Sonaric..."
-    for container in $(docker ps -a --filter "name=node" --format "{{.Names}}"); do
+    for container in $(docker ps -a --filter "name=sonaric-node" --format "{{.Names}}"); do
         echo "Перезапуск $container..."
         docker exec "$container" systemctl restart sonaricd
     done
     echo "Все узлы успешно перезапущены."
 }
-
 
 show_header() {
   echo ""
@@ -323,15 +321,14 @@ show_header() {
   echo ""
 }
 
-
 show_menu(){
   echo "Выберите действие:"
   echo "1. Пересоздать Docker-образ"
-  echo "2. Установить новую ноду с ограничениями 1CPU, 286Mb"
-  echo "3. Установить новую ноду с ограничениями 2CPU, 512Mb"
+  echo "2. Установить новую ноду с ограничениями 0.5CPU, 286Mb"
+  echo "3. Установить новую ноду с ограничениями 1CPU, 512Mb"
   echo "4. Установить новую ноду без ограничений"
-  echo "5. Мульти-установка нод с ограничениями 1CPU, 286Mb"
-  echo "6. Мульти-установка нод с ограничениями 2CPU, 512Mb"
+  echo "5. Мульти-установка нод с ограничениями 0.5CPU, 286Mb"
+  echo "6. Мульти-установка нод с ограничениями 1CPU, 512Mb"
   echo "7. Мульти-установка нод без ограничений"
   echo "8. Обновить все ноды"
   echo "9. Задать автоматическое ежедневное обновление всех нод"
@@ -389,4 +386,3 @@ main_menu() {
 
 # Запуск основного меню
 main_menu
-
