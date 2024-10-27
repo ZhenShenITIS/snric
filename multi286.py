@@ -29,9 +29,14 @@ for proxy_data in lines:
         # Ожидаем завершения установки ноды
         child.expect('запущен', timeout=30)
 
-        child.expect('Success', timeout=600)
-        print ("Нода успешно запущена с данными ", proxy_data, " и ограничениями 0.5/0.286")
-
+        # Ожидаем появления 'Success' или '403'
+        index = child.expect(['Success', '403'], timeout=600)
+        if index == 0:
+            print("Нода успешно запущена с данными", proxy_data, "и ограничениями 0.5/0.286")
+        elif index == 1:
+            print("Ошибка установки ноды с данными", proxy_data, "- получен код 403")
+            # Можно пропустить ожидание меню и перейти к следующей ноде
+            continue
 
         # Ожидаем возвращения к меню для следующей установки
         child.expect('ZhenShen9', timeout=30)
