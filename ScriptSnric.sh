@@ -14,7 +14,7 @@ check_docker() {
 # Функция для создания базового Docker-образа с поддержкой systemd
 build_base_image() {
     check_docker
-    if ! docker images | grep -q jrei-sonaric-node; then
+    if ! docker images | grep -q sonaric-node-out-systemd; then
         echo "Создание базового Docker-образа для Sonaric..."
         cat > Dockerfile.sonaric <<EOF
 FROM jrei/systemd-ubuntu:22.04
@@ -23,7 +23,6 @@ ENV container=docker
 
 RUN apt-get update && \\
     apt-get install -y --no-install-recommends \\
-        systemd systemd-sysv \\
         wget curl gnupg gnupg2 dirmngr \\
         apt-utils ca-certificates apt-transport-https && \\
     apt-get clean && \\
@@ -34,7 +33,7 @@ STOPSIGNAL SIGRTMIN+3
 
 CMD ["/sbin/init"]
 EOF
-        docker build -t jrei-sonaric-node -f Dockerfile.sonaric .
+        docker build -t sonaric-node-out-systemd -f Dockerfile.sonaric .
         rm Dockerfile.sonaric
     fi
 }
@@ -42,7 +41,7 @@ check_docker
 build_base_image
 
 rebuild_base_image(){
-  local image_name="jrei-sonaric-node"
+  local image_name="sonaric-node-out-systemd"
 
   # Проверяем, существует ли образ
   image_id=$(docker images -q "$image_name")
@@ -98,7 +97,7 @@ install_new_node286() {
         --cpus="0.5" \
         --name "$node_name" \
         --hostname VPS \
-        jrei-sonaric-node
+        sonaric-node-out-systemd
 
     if [ $? -eq 0 ]; then
         echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
@@ -165,7 +164,7 @@ install_new_node512() {
         --cpus="1.0" \
         --name "$node_name" \
         --hostname VPS \
-        jrei-sonaric-node
+        sonaric-node-out-systemd
 
     if [ $? -eq 0 ]; then
         echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
@@ -230,7 +229,7 @@ install_new_nodenolimits() {
         -e HTTPS_PROXY="http://$proxy_username:$proxy_password@$proxy_ip:$proxy_port" \
         --name "$node_name" \
         --hostname VPS \
-        jrei-sonaric-node
+        sonaric-node-out-systemd
 
     if [ $? -eq 0 ]; then
         echo "Контейнер $node_name успешно запущен" | tee -a "$node_dir/$node_name.log"
