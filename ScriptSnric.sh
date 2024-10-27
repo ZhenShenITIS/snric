@@ -86,7 +86,9 @@ install_new_node286() {
 
     # Запуск контейнера
     docker run -d --privileged \
+        --cgroups=host \
         --security-opt seccomp=unconfined \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
         -v /dev/urandom:/dev/urandom \
         -v /dev/random:/dev/random \
         -e container=docker \
