@@ -29,7 +29,7 @@ for proxy_data in lines:
         # Ожидаем завершения установки ноды
         child.expect('запущен', timeout=30)
 
-        child.expect('Success', timeout=300)
+        child.expect('Success', timeout=600)
         print ("Нода успешно запущена с данными ", proxy_data, " и ограничениями 1/0.512")
 
 
